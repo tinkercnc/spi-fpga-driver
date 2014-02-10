@@ -1,0 +1,32 @@
+# components
+#loadrt conv_float_u32
+#loadrt siggen
+loadrt pluto_servo_bbbspi
+loadrt threads name1=test-thread period1=500000
+# pin aliases
+# param aliases
+# signals
+# nets
+#net tringle siggen.0.triangle => pluto-servo-bbbspi.pwm.0.value
+# parameter values
+#setp pluto-servo-bbbspi.transfer.tmax       154994
+#setp siggen.0.update.tmax        11702
+# realtime thread/function links
+addf pluto-servo-bbbspi.spiread test-thread
+#addf siggen.0.update test
+#setp siggen.0.amplitude 2000
+#setp siggen.0.offset 2000
+#setp siggen.0.frequency 0.4
+addf pluto-servo-bbbspi.spiwrite test-thread
+
+setp pluto-servo-bbbspi.pwm.0.enable 1
+setp pluto-servo-bbbspi.pwm.0.scale 100
+
+#net Xpos-fb pluto-servo-bbbspi.encoder.0.position => pid.0.feedback axis.0.motor-pos-fb
+setp pluto-servo-bbbspi.encoder.0.scale 1
+
+loadusr halmeter pin pluto-servo-bbbspi.encoder.3.count -g 0 1000
+loadusr halmeter param pluto-servo-bbbspi.debug-0 -g 300 1000
+loadusr halmeter param pluto-servo-bbbspi.debug-1 -g 600 1000
+
+start

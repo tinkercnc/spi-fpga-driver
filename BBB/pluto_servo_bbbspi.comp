@@ -1,0 +1,454 @@
+/*   This is a component of pluto_servo_bbbspi for BeagleBoneBlack , a PWM servo driver and quadrature
+ *    counter over SPI for linuxcnc.
+ *    Copyright 2013 Matsche <tinker@play-pla.net>
+ *
+ *
+ *    This program is free software; you can redistribute it and/or modify
+ *    it under the terms of the GNU General Public License as published by
+ *    the Free Software Foundation; either version 3 of the License, or
+ *    (at your option) any later version.
+ *
+ *    This program is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *    GNU General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public License
+ *    along with this program; if not, write to the Free Software
+ *    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301 USA
+ */
+
+component pluto_servo_bbbspi """Hardware driver and firmware for the Pluto-P parallel-port FPGA, for use with servo machines and BeagleBoneBlack SPI .""";
+
+description """
+Pluto_servo is a LinuxCNC software driver and associated firmware that allow the Pluto-P board to be used to control a servo-based CNC machine.
+""";
+
+pin out s32 encoder.#.count[4];
+pin out float encoder.#.position[4];
+pin out float encoder.#.velocity[4];
+pin in bit encoder.#.reset[4];
+pin io bit encoder.#.index-enable[4]; 
+param rw float encoder.#.scale[4] =1.0;
+
+param rw bit encoder.z-polarity "Set to TRUE if the index pulse is active low, FALSE if it is active high.  Affects all encoders.";
+
+pin in float pwm.#.value[4];
+pin in bit pwm.#.enable[4] "pwm.\\fIM\\fR corresponds to the pins labeled UP\\fIM\\fR and DN\\fIM\\fR on the pinout diagram";
+param rw float pwm.#.offset[4];
+param rw float pwm.#.scale[4]=1.0;
+param rw float pwm.#.max-dc[4]=1.0;
+param rw float pwm.#.min-dc[4]=0;
+param rw bit pwm.#.pwmdir[4]=0
+"Set to TRUE use PWM+direction mode.  Set to FALSE to use Up/Down mode.";
+
+param rw bit pwm.is-pdm "Set to TRUE to use PDM (also called interleaved PWM) mode.  Set to FALSE to use traditional PWM mode.  Affects all PWM outputs.";
+
+
+pin in bit dout.##[20];
+
+param rw bit dout.##-invert[20]
+"If TRUE, the output on the corresponding \\fBdout.\\fIMM\\fR is inverted.";
+
+pin out bit din.##[20];
+pin out bit din.##_not[20];
+
+param rw s32 debug_0;
+param rw s32 debug_1 """These parameters can display values which are useful to developers or for debugging the driver and firmware.  They are not useful for integrators or users.""";
+
+see_also """The \\fIpluto_servo\\fR section in the HAL User Manual, which shows the location of each physical pin on the pluto board.""";
+
+option singleton;
+option extra_setup;
+option extra_cleanup;
+
+option data internal;
+
+function transfer  "transfers data between master and slave devices";
+
+license "GPL";
+author "Matsche";
+;;
+
+#include "rtapi.h"
+#include "rtapi_bitops.h"
+#include "rtapi_app.h"
+#include "hal.h"
+
+#if !defined(BUILD_SYS_USER_DSO)
+#error "This driver is for usermode threads only"
+#endif
+
+#if !defined(TARGET_PLATFORM_BEAGLEBONE)
+#error "This driver is for the BeagleBoneBlack platform only"
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <math.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <errno.h>
+#include <stdarg.h>
+
+#include "pluto_common_bbbspi.h"
+
+static volatile unsigned *gpio, *spi;
+static volatile u32 txBuf[BUFSIZE], rxBuf[BUFSIZE];
+
+static int ret = 0;
+static int fd;
+
+static volatile struct spi_ioc_transfer tr;
+/*
+ * {
+		.tx_buf = (unsigned long)txBuf,
+		.rx_buf = (unsigned long)rxBuf,
+		.len = ARRAY_SIZE((char*)txBuf),
+		.delay_usecs = delay,
+		.speed_hz = speed,
+		.bits_per_word = bits,
+	};
+	*/
+	
+static int map_gpio();
+static void setup_gpio();
+static void restore_gpio();
+static int filltxbuf();
+static int getrxbuf(long);
+static int pluto_program();
+static int transfer(struct __comp_state *, long, int);
+
+typedef struct {
+	int64_t last_index[4];
+	int64_t last_count[4];
+	int64_t reset_count[4];
+} internal;
+
+#define W 14
+#define MASK ((1<<W)-1)
+
+static inline int64_t extend(int64_t old, int newlow, int nbits) {
+	int64_t mask = (1<<nbits) - 1;
+	int64_t maxdelta = mask / 2;
+	int64_t oldhigh = old & ~mask;
+	int64_t oldlow = old & mask;
+	int64_t candidate1, candidate2;
+
+	candidate1 = oldhigh | newlow;
+	if(oldlow < newlow) candidate2 = candidate1 - (1<<nbits);
+	else                candidate2 = candidate1 + (1<<nbits);
+
+	if (llabs(old-candidate1) > maxdelta)
+	{
+		return candidate2;
+	}else
+		return candidate1;
+}
+
+int PWM(int enable, double value, double offset, double scale, double min_dc, double max_dc, int dio0, int dio1, int is_pdm, int is_pwmdir) {
+	int result;
+	if(enable == 0) return 0;
+
+	value = value / scale + offset;
+	if(value < -max_dc) value = -max_dc;
+	else if(value > -min_dc && value < 0) value = -min_dc;
+	else if(value > 0 && value < min_dc) value = min_dc;
+	else if(value > max_dc) value = max_dc;
+
+	value = 2047 * value;
+	if(value < -2047) value = -2047;
+	if(value > 2047) value = 2047;
+
+	if(value < 0) {
+		if(is_pwmdir) {
+			result = (1<<13) | (int)(-value);
+		} else {
+			result = (1<<15) | (int)(-value);
+		}
+	}else result = value;
+	if(is_pdm) result |= 1<<14;
+	if(dio0) result ^= 1<<12;
+	if(dio1) result ^= 1<<13;
+
+	return result;
+}
+
+EXTRA_SETUP() {
+	int i, retval = 0;
+
+	/*
+	 * program fpga firmware
+	 */
+	retval = pluto_program();
+	if(retval < 0)
+	{
+		rtapi_print_msg(RTAPI_MSG_ERR,
+						"HAL_pluto_servo_bbbspi: ERROR: uploading firmware failed!!!\n");
+		return retval;
+	}
+
+	fd = open(device, O_RDWR);
+	if (fd < 0){
+		rtapi_print_msg(RTAPI_MSG_ERR,
+						"HAL_pluto_servo_bbbspi: ERROR: can't open device %s\n", device);
+		return fd;
+	}
+	/*
+	 * spi mode
+	 */
+	mode |= SPI_CPHA;
+	retval = ioctl(fd, SPI_IOC_WR_MODE, &mode);
+	if (ret == -1){
+		rtapi_print_msg(RTAPI_MSG_ERR,
+						"HAL_pluto_servo_bbbspi: ERROR: can't set spi mode\n");
+		return retval;
+	}
+	retval = ioctl(fd, SPI_IOC_RD_MODE, &mode);
+	if (ret == -1){
+		rtapi_print_msg(RTAPI_MSG_ERR,
+						"HAL_pluto_servo_bbbspi: ERROR: can't get spi mode\n");
+		return retval;
+	}
+	/*
+	 * bits per word
+	 */
+	retval = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
+	if (ret == -1){
+		rtapi_print_msg(RTAPI_MSG_ERR,
+						"HAL_pluto_servo_bbbspi: ERROR: can't set bits per word\n");
+		return retval;
+	}
+	retval = ioctl(fd, SPI_IOC_RD_BITS_PER_WORD, &bits);
+	if (ret == -1){
+		rtapi_print_msg(RTAPI_MSG_ERR,
+						"HAL_pluto_servo_bbbspi: ERROR: can't get bits per word\n");
+		return retval;
+	}
+	/*
+	 * max speed hz
+	 */
+	retval = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
+	if (ret == -1){
+		rtapi_print_msg(RTAPI_MSG_ERR,
+						"HAL_pluto_servo_bbbspi: ERROR: can't set max speed hz\n");
+		return retval;
+	}
+	retval = ioctl(fd, SPI_IOC_RD_MAX_SPEED_HZ, &speed);
+	if (ret == -1){
+		rtapi_print_msg(RTAPI_MSG_ERR,
+						"HAL_pluto_servo_bbbspi: ERROR: can't get max speed hz\n");
+		return retval;
+	}
+	/*
+	rtapi_print(
+						"HAL_pluto_servo_bbbspi: spi mode: %d\n", mode);
+	rtapi_print(
+						"HAL_pluto_servo_bbbspi: bits per word: %d\n", bits);
+	rtapi_print(
+						"HAL_pluto_servo_bbbspi: max speed: %d Hz (%d KHz)\n", speed, speed/1000);
+	*/
+	rtapi_print("HAL_pluto_servo_bbbspi: spi mode: %d\n", mode);
+	rtapi_print("HAL_pluto_servo_bbbspi: bits per word: %d\n", bits);
+	rtapi_print("HAL_pluto_servo_bbbspi: max speed: %d Hz (%d KHz)\n", speed, speed/1000);
+	rtapi_print("SPIBUFSIZE: %d; BUFSIZE %d\n", SPIBUFSIZE, BUFSIZE);
+	
+	
+	tr.tx_buf = (unsigned long)txBuf;
+	tr.rx_buf = (unsigned long)rxBuf;
+	//tr.len = ARRAY_SIZE((char*)txBuf)*4;
+	tr.len = SPIBUFSIZE;
+	tr.delay_usecs = delay;
+	tr.speed_hz = speed;
+	tr.bits_per_word = bits;
+	
+	return 0;
+}
+
+EXTRA_CLEANUP() {
+	// reset the FPGA
+	*(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) & (~GPIO1_19_RST);
+	usleep(1000);
+	*(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) | GPIO1_19_RST;
+}
+
+FUNCTION transfer() {
+	char *buf;
+	int i;
+	__u32 spidata;
+	int r = 0;
+	
+	/*************************************************************/
+	/* write buffer */
+	/*************************************************************/
+	for(i=0; i<4; i++) {
+		if(pwm_max_dc(i) > 1) pwm_max_dc(i) = 1;
+		else if(pwm_max_dc(i) < 0) pwm_max_dc(i) = 0;
+		if(pwm_min_dc(i) < 0) pwm_min_dc(i) = 0;
+		else if(pwm_min_dc(i) > pwm_max_dc(i)) pwm_min_dc(i) = pwm_max_dc(i);
+	}
+
+#define D(x) (!dout(x) ^ !dout_invert(x))
+#define P(x,y) PWM(pwm_enable(x), pwm_value(x), pwm_offset(x), pwm_scale(x), \
+			pwm_min_dc(x), pwm_max_dc(x), D(y), D(y+1), pwm_is_pdm, pwm_pwmdir(x))
+	txBuf[0] = P(0,10) | (P(1, 12) << 16);
+	txBuf[1] = P(2,14) | (P(3, 16) << 16);
+
+	for(i=0; i<10; i++) {
+			if(!dout(i) ^ !dout_invert(i)) r |= (1<<i);
+	}
+	if (encoder_z_polarity) r |= 0x8000;
+	//if (watchdog) r |= 0x4000;
+	//if (test_encoder) r |= 0x2000;
+	//write16(r);
+	txBuf[2] = r;
+	
+	for (i=3; i<BUFSIZE; i++) {
+		txBuf[i] = i;
+	}
+	
+	r = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+	if (r < 1){
+		rtapi_print_msg(RTAPI_MSG_ERR,
+						"HAL_pluto_servo_bbbspi: ERROR: can't send spi message\n");
+		//return r;
+	}
+	
+	/*************************************************************/
+	/* read buffer */
+	/*************************************************************/
+	for(i=0; i<4; i++) {	// i = encoder#
+		int64_t count, index;
+		int newlow, indlow, indexed;
+		int reset;
+		spidata = rxBuf[i];
+		reset = encoder_reset(i);
+		/*
+		if(i == 0) {
+			int status = inb(ioaddr+1) & 1;
+			if(status) {
+					communication_error ++;
+			pluto_clear_error_register();
+			}
+			//if(communication_error) { EPP_DIR_WRITE(); return; }
+		} */
+
+		newlow = spidata & MASK;
+		indlow = (spidata >> W) & MASK;
+		indexed = spidata & (1<<(2*W));
+
+		count = extend(data.last_count[i], newlow, W);
+		if(indexed)
+				index = extend(count, indlow, W);
+		else
+				index = data.last_index[i];
+
+		if(encoder_index_enable(i) && indexed) {
+				encoder_index_enable(i) = 0;
+				data.reset_count[i] = index;
+		}
+		if(reset) encoder_velocity(i) = 0;
+		else encoder_velocity(i) = (count - data.last_count[i]) /
+				encoder_scale(i) / fperiod;
+		data.last_index[i] = index;
+		data.last_count[i] = count;
+		if(reset) data.reset_count[i] = count;
+		encoder_count(i) = count - data.reset_count[i];
+		encoder_position(i) = encoder_count(i) / encoder_scale(i);
+
+		if(i == 3) {
+			debug_0 = spidata;
+			debug_1 = spidata;//& 0x000000FF);
+			//debug_1 = ((spidata<<1)& 0xFF000000)+((spidata<<1)& 0x00FF0000)+((spidata<<1)& 0x0000FF00)+((spidata<<1)& 0x000000FF);
+			//debug_1 = count;
+		}
+	}
+
+	spidata = rxBuf[4];
+
+	for(i=0; i< 20; i++) {
+		int b = spidata & (1<<i);
+		din(i) = !!b;
+		din_not(i) = !b;
+	}
+	
+	for (i=5; i<BUFSIZE; i++) {
+		spidata = rxBuf[i];
+	}
+
+}
+
+
+#define FIRMWARE_SIZE 19895
+static int pluto_program() {
+	int byte, bit;
+	int i;
+	FILE *f;
+	int size = 0;
+	
+	f= fopen("/home/linuxcnc/linuxcnc/src/hal/drivers/pluto_spi_servo_firmware/pluto-spi-bbb.rbf", "rb");
+	if(!f) {
+		rtapi_print("fopen-Error\n");
+		return -EIO;
+	}
+	if(fseek(f, 0, SEEK_END))
+	{
+		rtapi_print("fseek-Error!\n");
+		return -EIO;
+	}
+	size = ftell(f);
+	rewind(f);
+	rtapi_print( "Filesize: %d Bytes\n", size);
+	if(size != FIRMWARE_SIZE)
+	{
+		rtapi_print("Incorrect filesize!!\n");
+		return -EIO;
+	}
+	unsigned char buf[size];
+	if(fread(buf, 1, size, f) != FIRMWARE_SIZE) {
+		rtapi_print("fread-Error!\n");
+		return -EIO;
+	}
+	
+	gpio_setup();
+	// reset the FPGA in advance
+	*(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) & (~GPIO1_19_RST);
+	usleep(1000);
+	*(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) | GPIO1_19_RST;
+	
+	rtapi_print("uploading pluto-spi-firmware...\n");
+
+	// pull the reset low -- bit 2 of Control register
+	// keep it low 2 microseconds
+	for(i=0; i<12; i++) *(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) & (~GPIO1_19_RST);		//outb(0, ioaddr+2);
+
+	*(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) | GPIO1_18_CLK;
+	
+	// let it go high again
+	// delay 10 microseconds to guarantee nStatus high
+	for(i=0; i<40; i++) *(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) | GPIO1_19_RST;	//outb(4, ioaddr+2);
+
+	// Now program the device...
+	for(byte = 0; byte < FIRMWARE_SIZE; byte++) {
+		for(bit = 0; bit < 8; bit++) {
+			int v = buf[byte] & (1<<bit);
+			if(v){ 
+				*(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) | GPIO1_16_DATA0; 
+			}
+			else { 
+				*(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) & (~GPIO1_16_DATA0);
+			}
+			for(i=0; i<22; i++) *(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) & (~GPIO1_18_CLK);		//outb(0|4, ioaddr+2);
+			
+			for(i=0; i<22; i++) *(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) | GPIO1_18_CLK;		//outb(1|4, ioaddr+2);
+			
+			for(i=0; i<22; i++) *(gpio1base + GPIO_DATAOUT/4) = *(gpio1base + GPIO_DATAOUT/4) & (~GPIO1_18_CLK);
+		}
+	}
+	
+	rtapi_print("...done\n");
+}

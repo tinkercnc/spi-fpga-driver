@@ -1,0 +1,24 @@
+Wire Diagram:
+
+BBB Header P9  || PPORT @ pluto-p board
+---------------------------------------
+PIN | Name     || Name   | Pin
+-------------------------------
+18  | SPI0_D1  || nError | 15
+21  | SPI0_D0  || Data1  |  3
+22  | SPI0_SCLK|| AutoLE | 14
+17  | SPI0_CS0 || Data2  |  4
+
+15  | GPIO_16  || Data0  |  2
+14  | GPIO_18  || nStrobe|  1
+16  | GPIO_19  || nInit  | 16
+
+1,2 | GND      || GND    |18-25
+
+
+Compiling the Pluto SPI driver for the BeagleBoneBlack:
+
+    sudo comp --install pluto_servo_bbbspi.comp
+    sudo comp --install pluto_step_bbbspi.comp
+
+

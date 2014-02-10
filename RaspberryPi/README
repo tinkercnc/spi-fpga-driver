@@ -1,0 +1,20 @@
+Wire Diagram:
+
+RPi Connector   || PPORT @ pluto-p board
+-------------------------------------------
+MOSI 19         || Data0    2
+MISO 21         || Data1    3
+SCLK 23         || nStrobe  1
+CE0  24         || Init    16
+
+GPIO25  22      || Data2    4
+
+GND  20,25      || GND     18-25
+
+
+Compiling the Pluto SPI driver for the RasPi:
+
+    sudo comp --install pluto_servo_rpspi.comp
+    sudo comp --install pluto_step_rpspi.comp
+
+

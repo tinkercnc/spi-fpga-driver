@@ -1,0 +1,197 @@
+# load realtime modules
+# kinematics
+loadrt trivkins
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[TRAJ]AXES
+
+loadrt pluto_servo_rpspi
+loadrt at_pid num_chan=3
+loadrt ddt count=6
+loadrt constant count=1
+
+addf pluto-servo-rpspi.transfer        servo-thread
+#addf pluto-servo.write        servo-thread
+addf motion-command-handler  servo-thread
+addf motion-controller       servo-thread
+addf pid.0.do-pid-calcs      servo-thread
+addf pid.1.do-pid-calcs      servo-thread
+addf pid.2.do-pid-calcs      servo-thread
+
+
+addf constant.0                servo-thread
+addf ddt.0                     servo-thread
+addf ddt.1                     servo-thread
+addf ddt.2                     servo-thread
+addf ddt.3                     servo-thread
+addf ddt.4                     servo-thread
+addf ddt.5                     servo-thread
+
+####################################
+net Xpos-fb pluto-servo-rpspi.encoder.0.position => pid.0.feedback axis.0.motor-pos-fb
+net Ypos-fb pluto-servo-rpspi.encoder.1.position => pid.1.feedback axis.1.motor-pos-fb
+net Zpos-fb pluto-servo-rpspi.encoder.2.position => pid.2.feedback axis.2.motor-pos-fb
+
+################################
+# the values below come from the ini
+####################################
+# hook stuff together
+
+setp pluto-servo-rpspi.pwm.is-pdm 0
+setp pluto-servo-rpspi.encoder.0.scale [AXIS_0]INPUT_SCALE
+setp pluto-servo-rpspi.pwm.0.scale [AXIS_0]OUTPUT_SCALE # volts supply
+setp pluto-servo-rpspi.encoder.1.scale [AXIS_1]INPUT_SCALE
+setp pluto-servo-rpspi.pwm.1.scale [AXIS_1]OUTPUT_SCALE # volts supply
+setp pluto-servo-rpspi.encoder.2.scale [AXIS_2]INPUT_SCALE
+setp pluto-servo-rpspi.pwm.2.scale [AXIS_2]OUTPUT_SCALE # volts supply
+# spindle
+setp pluto-servo-rpspi.encoder.3.scale [AXIS_3]INPUT_SCALE
+
+setp pid.0.maxoutput [AXIS_0]OUTPUT_SCALE
+setp pid.1.maxoutput [AXIS_1]OUTPUT_SCALE
+setp pid.2.maxoutput [AXIS_2]OUTPUT_SCALE
+#setp pid.0.maxoutput 26 # volts at motor
+
+## x-achse
+setp pid.0.Pgain [AXIS_0]P
+setp pid.0.Igain [AXIS_0]I
+setp pid.0.Dgain [AXIS_0]D
+setp pid.0.bias [AXIS_0]BIAS
+setp pid.0.FF0 [AXIS_0]FF0
+setp pid.0.FF1 [AXIS_0]FF1
+setp pid.0.FF2 [AXIS_0]FF2
+# deadband should be just over 1 count
+setp pid.0.deadband [AXIS_0]DEADBAND
+
+## y-achse
+setp pid.1.Pgain [AXIS_1]P
+setp pid.1.Igain [AXIS_1]I
+setp pid.1.Dgain [AXIS_1]D
+setp pid.1.bias [AXIS_1]BIAS
+setp pid.1.FF0 [AXIS_1]FF0
+setp pid.1.FF1 [AXIS_1]FF1
+setp pid.1.FF2 [AXIS_1]FF2
+# deadband should be just over 1 count
+setp pid.1.deadband [AXIS_1]DEADBAND
+
+## z-achse
+setp pid.2.Pgain [AXIS_2]P
+setp pid.2.Igain [AXIS_2]I
+setp pid.2.Dgain [AXIS_2]D
+setp pid.2.bias [AXIS_2]BIAS
+setp pid.2.FF0 [AXIS_2]FF0
+setp pid.2.FF1 [AXIS_2]FF1
+setp pid.2.FF2 [AXIS_2]FF2
+# deadband should be just over 1 count
+setp pid.2.deadband [AXIS_2]DEADBAND
+
+################################
+#######
+net Xpos-cmd axis.0.motor-pos-cmd => pid.0.command ddt.0.in
+net Xvel-cmd pid.0.output => pluto-servo-rpspi.pwm.0.value
+
+net Xvel ddt.0.out => ddt.1.in
+net Xacc ddt.1.out
+
+net Xenable axis.0.amp-enable-out => pid.0.enable pluto-servo-rpspi.pwm.0.enable pluto-servo-rpspi.dout.00
+net Xenable axis.0.amp-enable-out => pid.0.enable pluto-servo-rpspi.pwm.0.enable
+#setp pluto-servo-rpspi.encoder.0.index-enable 0
+#setp pluto-servo-rpspi.dout.00 1
+setp pluto-servo-rpspi.dout.03 1
+#######
+net Ypos-cmd axis.1.motor-pos-cmd => pid.1.command ddt.2.in
+net Yvel-cmd pid.1.output => pluto-servo-rpspi.pwm.1.value
+
+net Yvel ddt.2.out => ddt.3.in
+net Yacc ddt.3.out
+
+net Yenable axis.1.amp-enable-out => pid.1.enable pluto-servo-rpspi.pwm.1.enable pluto-servo-rpspi.dout.03
+net Yenable axis.1.amp-enable-out => pid.1.enable pluto-servo-rpspi.pwm.1.enable
+#setp pluto-servo-rpspi.encoder.1.index-enable 0
+
+#######
+net Zpos-cmd axis.2.motor-pos-cmd => pid.2.command ddt.4.in
+net Zvel-cmd pid.2.output => pluto-servo-rpspi.pwm.2.value
+
+net Zvel ddt.4.out => ddt.5.in
+net Zacc ddt.5.out
+net Zenable axis.2.amp-enable-out => pid.2.enable pluto-servo-rpspi.pwm.2.enable pluto-servo-rpspi.dout.07
+net Zenable axis.2.amp-enable-out => pid.2.enable pluto-servo-rpspi.pwm.2.enable
+#setp pluto-servo-rpspi.encoder.2.index-enable 0
+
+
+####################################
+# Spindle
+####################################
+loadrt xor2 count=1
+loadrt oneshot
+loadrt lowpass count=1
+loadrt scale count=1
+loadrt flipflop count=1
+#
+addf xor2.0                  servo-thread
+addf oneshot.0              servo-thread
+addf lowpass.0 	servo-thread
+addf scale.0 	servo-thread
+addf flipflop.0	servo-thread
+#
+
+#setp pluto-servo-rpspi.encoder.3.counter-mode true
+# fuer den spindelindex-impuls 0.1 ms
+setp oneshot.0.width 0.0001
+setp scale.0.gain 60
+setp lowpass.0.gain .07
+#
+# zum auswerten der drehrichtung da der puls vom hallsensor zu lang ist
+net spindle-A flipflop.0.clk <= pluto-servo-rpspi.din.15	# QA3
+net spindle-B flipflop.0.data <= pluto-servo-rpspi.din.19 # QB3
+net spindel-dir flipflop.0.out => xor2.0.in0
+net spindel-hall xor2.0.in1 <= pluto-servo-rpspi.din.00	# z-impuls vom hall-sensor
+net spindel-idx xor2.0.out => oneshot.0.in 
+net spindel-idx-pulse oneshot.0.out => pluto-servo-rpspi.dout.01 # muss hardwaeremaessig mit pluto-servo-rpspi.din.11 (QZ3) verbunden werden (mit der kirche ums kreuz)
+#
+net spindle-position pluto-servo-rpspi.encoder.3.position => motion.spindle-revs
+net spindle-rps-raw pluto-servo-rpspi.encoder.3.velocity => lowpass.0.in
+net spindle-rps-filtered lowpass.0.out => scale.0.in motion.spindle-speed-in
+net spindle-rpm-filtered scale.0.out
+net spindle-idx-enable pluto-servo-rpspi.encoder.3.index-enable <=> motion.spindle-index-enable
+#
+# Spindle ende
+####################################
+
+#######
+net estop-loop iocontrol.0.user-enable-out iocontrol.0.emc-enable-in
+
+net tool-prep-loop iocontrol.0.tool-prepare iocontrol.0.tool-prepared
+net tool-change-loop iocontrol.0.tool-change iocontrol.0.tool-changed
+
+
+#############################################
+# HOMING
+# connect pin din.08-not to X home and min limit
+net XHome pluto-servo-rpspi.din.08-not => axis.0.home-sw-in axis.0.pos-lim-sw-in
+
+## connect pin din.09-not to Y home and min limit
+net YHome pluto-servo-rpspi.din.09-not => axis.1.home-sw-in axis.1.pos-lim-sw-in
+
+# connect pin din.10-not to Z home and min limit
+net ZHome pluto-servo-rpspi.din.10 => axis.2.home-sw-in axis.2.neg-lim-sw-in
+
+#############################################
+## toolprobing
+#net probe-touchin motion.probe-input <= pluto-servo-rpspi.din.04-not
+net probe-touchin motion.probe-input <= pluto-servo-rpspi.din.02
+
+#############################################
+## Manual Toolchanging
+loadusr -W hal_manualtoolchange
+
+# in case they were linked already
+unlinkp iocontrol.0.tool-change
+unlinkp iocontrol.0.tool-changed
+
+net tool-change hal_manualtoolchange.change iocontrol.0.tool-change
+net tool-changed hal_manualtoolchange.changed iocontrol.0.tool-changed
+net tool-prep-number hal_manualtoolchange.number iocontrol.0.tool-prep-number
+
+
+
+

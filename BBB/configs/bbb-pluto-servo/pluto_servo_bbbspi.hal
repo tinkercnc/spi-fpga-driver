@@ -1,0 +1,24 @@
+# components
+#loadrt conv_float_u32
+loadrt siggen
+loadrt pluto_servo_bbbspi
+loadrt threads name1=test period1=400000
+# pin aliases
+# param aliases
+# signals
+# nets
+net tringle siggen.0.triangle => pluto-servo-bbbspi.pwm.0.value
+# parameter values
+#setp pluto-servo-bbbspi.transfer.tmax       154994
+setp siggen.0.update.tmax        11702
+# realtime thread/function links
+addf pluto-servo-bbbspi.transfer test
+addf siggen.0.update test
+setp siggen.0.amplitude 1000
+setp siggen.0.offset 0
+setp siggen.0.frequency 0.4
+setp pluto-servo-bbbspi.pwm.0.enable 1
+setp pluto-servo-bbbspi.pwm.0.scale 1000
+setp pluto-servo-bbbspi.encoder.0.scale 400
+start
+

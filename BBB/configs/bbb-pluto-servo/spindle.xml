@@ -1,0 +1,9 @@
+<pyvcp>
+    <label>
+        <text>"Spindle speed:"</text>
+    </label>
+    <bar>
+        <halpin>"spindle-speed"</halpin>
+        <max_>7000</max_>
+    </bar>
+</pyvcp>

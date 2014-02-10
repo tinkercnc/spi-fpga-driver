@@ -1,0 +1,104 @@
+/*###############################################################*/
+/* BB-SPI0-AND-FPGACONF-00A0.dts                                      */
+/*###############################################################*/
+/*
+* Copyright (C) 2014 Matsche <tinkerer@play-pla.net>
+*
+* This program is free software; you can redistribute it and/or modify
+* it under the terms of the GNU General Public License version 2 as
+* published by the Free Software Foundation.
+*/
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "ti,beaglebone", "ti,beaglebone-black";
+
+	/* identification */
+	part-number = "BB-SPI0-AND-FPGA";
+	version = "00A0";
+
+	/* state the resources this cape uses */
+	exclusive-use = 
+		/* the pin header uses */
+		"P9.17",	/* spi0_cs0 */
+		"P9.18",	/* spi0_d1 */
+		"P9.21",	/* spi0_d0 */
+		"P9.22",	/* spi0_sclk */
+		/* fpga-config */
+		"P9.14",	/* gpio1_18, pin 18 */
+		"P9.15",	/* gpio1_16, pin 16 */
+		"P9.16",	/* gpio1_19, pin 19 */
+		 /* the hardware IP uses */
+		"gpio1_18", "gpio1_16", "gpio1_19", "spi0";
+		
+	fragment@0 {
+		target = <&am33xx_pinmux>;
+		__overlay__ {
+			bb_fpga_conf_pins: pinmux_bb_fpga_conf_pins {
+				pinctrl-single,pins = <
+					0x048 0x07 	/* P9 14 GPIO1_18:   | MODE7 | OUTPUT */
+					0x040 0x07	/* P9 15 GPIO1_16:   | MODE7 | OUTPUT */
+					0x04c 0x07 	/* P9 16 GPIO1_19:   | MODE7 | OUTPUT */
+				>;
+			};
+			bb_spi0_pins: pinmux_bb_spi0_pins {
+				pinctrl-single,pins = <
+					0x150 0x30	/* spi0_sclk.spi0_sclk, INPUT_PULLUP | MODE0 */
+					0x154 0x30	/* spi0_d0.spi0_d0, INPUT_PULLUP | MODE0 */
+					0x158 0x10	/* spi0_d1.spi0_d1, OUTPUT_PULLUP | MODE0 */
+					0x15c 0x10	/* spi0_cs0.spi0_cs0, OUTPUT_PULLUP | MODE0 */
+				>;
+			};
+		};	
+	};
+	
+	fragment@1 {
+		target = <&spi0>;	/* spi0 is numbered correctly */
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&bb_spi0_pins>;
+
+			channel@0 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				compatible = "spidev";
+
+				reg = <0>;
+				spi-max-frequency = <16000000>;
+				spi-cpha;
+			};
+
+
+			channel@1 {
+				#address-cells = <1>;
+				#size-cells = <0>;
+
+				compatible = "spidev";
+
+				reg = <1>;
+				spi-max-frequency = <16000000>;
+			};
+		};
+	};
+	
+	fragment@2 {
+		target = <&ocp>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			
+			fpga_conf {
+				compatible = "bone-pinmux-helper";
+				status = "okay";
+				pinctrl-names = "default";
+				pinctrl-0 = <&bb_fpga_conf_pins>;
+			};
+		};
+	};
+};
