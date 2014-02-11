@@ -1,5 +1,4 @@
-/*   This is a component of pluto_servo_bbbspi for BeagleBoneBlack , a PWM servo driver and quadrature
- *    counter over SPI for linuxcnc.
+/*   This is a component of pluto_servo/step_bbbspi for BeagleBoneBlack to FPGA over SPI for linuxcnc.
  *    Copyright 2013 Matsche <tinker@play-pla.net>
  *
  *

@@ -1,5 +1,7 @@
-/*   This is a component of pluto_step_rpspi for RaspberryPi , a stepper driver over SPI for linuxcnc.
+/*   This is a component of pluto_servo/step_bbbspi for RaspberryPi to FPGA over SPI for linuxcnc.
  *    Copyright 2013 Matsche <tinker@play-pla.net>
+ *                               based on GP Orcullo's picnc driver.
+ *
  *
  *    This program is free software; you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -21,7 +23,7 @@
 
 				/* SPICLK = 250 MHz/(1 << SPICLKDIV) */
 #define SPICLKDIV		6		/* SPI clk divider (0-15) */
-#define SPIBUFSIZE		20		/* SPI buffer size */
+#define SPIBUFSIZE		20		/* SPI buffer size in bytes */
 #define BUFSIZE			(SPIBUFSIZE/4)
 
 /* Broadcom defines */

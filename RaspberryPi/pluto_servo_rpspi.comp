@@ -97,7 +97,7 @@ author "Matsche";
 #include <errno.h>
 #include <stdarg.h>
 
-#include "pluto_servo_rpspi.h"
+#include "pluto_common_rpspi.h"
 
 volatile unsigned *gpio, *spi;
 static volatile u32 txBuf[BUFSIZE], rxBuf[BUFSIZE];
