@@ -16,9 +16,12 @@ PIN | Name     || Name   | Pin
 1,2 | GND      || GND    |18-25
 
 
+
 Compiling the Pluto SPI driver for the BeagleBoneBlack:
 
     sudo comp --install pluto_servo_bbbspi.comp
     sudo comp --install pluto_step_bbbspi.comp
 
+
+sudo cp ./dts/BB-SPI0-AND-FPGA-00A0.dtbo /lib/firmware/
 
