@@ -1,4 +1,4 @@
 spi-fpga-driver
 ===============
 
-lcnc to fpga over spi driver
+LinuxCNC to fpga over spi driver for Beagleboneblack and RaspberryPi
