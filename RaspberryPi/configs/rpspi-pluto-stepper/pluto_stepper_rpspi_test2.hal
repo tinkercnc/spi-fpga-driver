@@ -1,0 +1,22 @@
+# components
+#loadrt conv_float_u32
+#loadrt siggen
+loadrt pluto_step_rpspi
+loadrt threads name1=test-thread period1=500000
+addf pluto-step-rpspi.transfer test-thread
+#addf pluto-step-rpspi.spitest test-thread
+
+#addf siggen.0.update test
+#setp siggen.0.amplitude 2000
+#setp siggen.0.offset 2000
+#setp siggen.0.frequency 0.4
+
+setp pluto-step-rpspi.stepgen.0.enable 1
+setp pluto-step-rpspi.stepgen.0.scale 1
+
+loadusr halmeter pin pluto-step-rpspi.stepgen.0.counts  -g 0 1050
+loadusr halmeter param pluto-step-rpspi.debug-0 -g 300 1050
+loadusr halmeter param pluto-step-rpspi.debug-1 -g 600 1050
+loadusr halmeter pin pluto-step-rpspi.stepgen.0.position-fb  -g 900 1050
+
+start
