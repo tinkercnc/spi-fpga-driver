@@ -38,9 +38,9 @@ assign nConfig = nRESET;
 //assign nConfig = 1'b1;
 reg Spolarity;
 
-reg[9:0] real_dout;
-output [9:0] dout = 14'bZ;
-OC_Buff ocout[9:0](real_dout, dout);
+reg[13:0] real_dout;
+output [13:0] dout = 14'bZ;
+OC_Buff ocout[13:0](real_dout, dout);
 
 wire[3:0] real_step;
 output [3:0] step = 4'bZ;
