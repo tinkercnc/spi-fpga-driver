@@ -33,6 +33,8 @@
 #define BCM2835_GPIO_BASE	(BCM2835_PERI_BASE + 0x200000) /* GPIO controller */
 #define BCM2835_SPI_BASE	(BCM2835_PERI_BASE + 0x204000) /* SPI controller */
 
+#define BCM2709_OFFSET		0x1F000000
+
 #define BCM2835_GPFSEL0		*(gpio)
 #define BCM2835_GPFSEL1		*(gpio + 1)
 #define BCM2835_GPFSEL2		*(gpio + 2)
@@ -85,5 +87,11 @@
 
 #define GPIO_SET *(gpio+7)  // sets   bits which are 1 ignores bits which are 0
 #define GPIO_CLR *(gpio+10) // clears bits which are 1 ignores bits which are 0
+
+typedef enum {
+	UNSUPPORTED,
+	RPI,
+	RPI_2
+} platform_t;
 
 #endif

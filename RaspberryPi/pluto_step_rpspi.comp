@@ -134,11 +134,13 @@ author "Matsche";
 
 volatile unsigned *gpio, *spi;
 static volatile u32 txBuf[BUFSIZE], rxBuf[BUFSIZE];
+static platform_t platform;
 
 static int map_gpio();
 static void setup_gpio();
 static void restore_gpio();
 static int pluto_program();
+platform_t check_platform(void);
 
 static int speedrange=0;
 RTAPI_MP_INT(speedrange, "Speed range 0..3");
@@ -184,9 +186,10 @@ static inline int64_t extend(int64_t old, int newlow, int nbits) {
 EXTRA_SETUP() {
 	int i, retval = 0;
 
+	platform = check_platform();
 	retval = map_gpio();
 	if (retval < 0) {
-		rtapi_print(
+		rtapi_print_msg(RTAPI_MSG_ERR,
 		        "HAL_pluto_servo_rpspi: ERROR: cannot map GPIO memory\n");
 		return retval;
 	}
@@ -194,7 +197,7 @@ EXTRA_SETUP() {
 	retval = pluto_program();
 	if(retval < 0)
 	{
-		rtapi_print(
+		rtapi_print_msg(RTAPI_MSG_ERR,
 		        "HAL_pluto_servo_rpspi: ERROR: uploading firmware failed!!!\n");
 		return retval;
 	}
@@ -273,7 +276,7 @@ FUNCTION(transfer) {
 
 	if(steplen_ticks > TMAX) {
 		steplen_ticks = TMAX;
-		rtapi_print(
+		rtapi_print_msg(RTAPI_MSG_ERR,
 				"Requested step length %dns decreased to %dns "
 				"due to hardware limitations\n",
 				stepgen_steplen, TMAX * PLUTO_SPEED_NS);
@@ -282,7 +285,7 @@ FUNCTION(transfer) {
 
 	if(dirtime_ticks > TMAX) {
 		dirtime_ticks = TMAX;
-		rtapi_print(
+		rtapi_print_msg(RTAPI_MSG_ERR,
 				"Requested direction change time %dns decreased to %dns "
 				"due to hardware limitations\n",
 				stepgen_dirtime, TMAX * PLUTO_SPEED_NS);
@@ -320,7 +323,7 @@ FUNCTION(transfer) {
 		if(stepgen_maxvel(i) != 0 && stepgen_maxvel(i) > actual_max) {
 			static int message_printed[4] = {0,0,0,0};
 			if(!message_printed[i]) {
-				rtapi_print(
+				rtapi_print_msg(RTAPI_MSG_ERR,
 						"Requested step rate %dHz decreased to %dHz "
 						"due to hardware or timing limitations\n",
 						(int)(stepgen_maxvel(i) * scale_abs),
@@ -430,10 +433,22 @@ FUNCTION(transfer) {
 
 int map_gpio() {
 	int fd;
+	static u32 mem_base, mem_spi_base;
+
+	switch (platform) {
+	case RPI:
+		mem_base = BCM2835_GPIO_BASE;
+		mem_spi_base = BCM2835_SPI_BASE;
+		break;
+	case RPI_2:
+		mem_base = BCM2835_GPIO_BASE + BCM2709_OFFSET;
+		mem_spi_base = BCM2835_SPI_BASE + BCM2709_OFFSET;
+		break;
+	}
 
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
 	if (fd < 0) {
-		rtapi_print("HAL_pluto_servo_rpspi: can't open /dev/mem \n");
+		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_pluto_servo_rpspi: can't open /dev/mem \n");
 		return -1;
 	}
 
@@ -444,7 +459,7 @@ int map_gpio() {
 	        PROT_READ|PROT_WRITE,
 	        MAP_SHARED,
 	        fd,
-	        BCM2835_GPIO_BASE);
+	        mem_base);
 
 	/* mmap SPI */
 	spi = mmap(
@@ -453,17 +468,17 @@ int map_gpio() {
 	        PROT_READ|PROT_WRITE,
 	        MAP_SHARED,
 	        fd,
-	        BCM2835_SPI_BASE);
+	        mem_spi_base);
 
 	close(fd);
 
 	if (gpio == MAP_FAILED) {
-		rtapi_print("HAL_pluto_servo_rpspi: can't map gpio\n");
+		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_pluto_servo_rpspi: can't map gpio\n");
 		return -2;
 	}
 
 	if (spi == MAP_FAILED) {
-		rtapi_print("HAL_pluto_servo_rpspi: can't map spi\n");
+		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_pluto_servo_rpspi: can't map spi\n");
 		return -3;
 	}
 
@@ -519,14 +534,14 @@ static int pluto_program() {
 	FILE *f;
 	int size = 0;
 	
-	f= fopen("/home/rpi/regal/src/linuxcnc-pluto-servo-spi/pluto_spi_stepper_firmware/pluto_spi_stepper_opendrain.rbf", "rb");
+	f= fopen("/home/rpi/regal/src/linuxcnc-pluto-servo-spi/pluto_spi_stepper_firmware/pluto_spi_stepper.rbf", "rb");
 	if(!f) {
-		rtapi_print( "fopen-Error\n");
+		rtapi_print_msg(RTAPI_MSG_ERR, "fopen-Error\n");
 		return -EIO;
 	}
 	if(fseek(f, 0, SEEK_END))
 	{
-		rtapi_print( "fseek-Error!\n");
+		rtapi_print_msg(RTAPI_MSG_ERR, "fseek-Error!\n");
 		return -EIO;
 	}
 	size = ftell(f);
@@ -534,12 +549,12 @@ static int pluto_program() {
 	rtapi_print_msg(RTAPI_MSG_INFO, "Filesize: %d Bytes\n", size);
 	if(size != FIRMWARE_SIZE)
 	{
-		rtapi_print( "Incorrect filesize!!\n");
+		rtapi_print_msg(RTAPI_MSG_ERR, "Incorrect filesize!!\n");
 		return -EIO;
 	}
 	unsigned char buf[size];
 	if(fread(buf, 1, size, f) != FIRMWARE_SIZE) {
-		rtapi_print("fread-Error!\n");
+		rtapi_print_msg(RTAPI_MSG_ERR,"fread-Error!\n");
 		return -EIO;
 	}
 	
@@ -564,7 +579,7 @@ static int pluto_program() {
 	GPIO_SET = 1<<25;
 	usleep(1000);
 	
-		rtapi_print("uploading pluto-spi-firmware...\n");
+		rtapi_print_msg(RTAPI_MSG_ERR,"uploading pluto-spi-firmware...\n");
 
 	// pull the reset low -- bit 2 of Control register
 	// keep it low 2 microseconds
@@ -586,5 +601,29 @@ static int pluto_program() {
 				for(i=0; i<22; i++) GPIO_CLR = 1<<11;
 		}
 	}
-	rtapi_print("...done\n");
+	rtapi_print_msg(RTAPI_MSG_ERR,"...done\n");
+}
+
+platform_t check_platform(void)
+{
+	FILE *fp;
+	char buf[2048];
+	size_t fsize;
+
+	fp = fopen("/proc/cpuinfo", "r");
+	fsize = fread(buf, 1, sizeof(buf), fp);
+	fclose(fp);
+	
+	if (fsize == 0 || fsize == sizeof(buf))
+		return 0;
+
+	/* NUL terminate the buffer */
+	buf[fsize] = '\0';
+
+	if (NULL != strstr(buf, "BCM2708"))
+		return RPI;
+	else if (NULL != strstr(buf, "BCM2709"))
+		return RPI_2;
+	else
+		return UNSUPPORTED;
 }

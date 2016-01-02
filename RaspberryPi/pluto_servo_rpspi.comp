@@ -102,11 +102,13 @@ author "Matsche";
 
 volatile unsigned *gpio, *spi;
 static volatile u32 txBuf[BUFSIZE], rxBuf[BUFSIZE];
+static platform_t platform;
 
 static int map_gpio();
 static void setup_gpio();
 static void restore_gpio();
 static int pluto_program();
+platform_t check_platform(void);
 
 typedef struct {
     int64_t last_index[4];
@@ -166,6 +168,7 @@ int PWM(int enable, double value, double offset, double scale, double min_dc, do
 EXTRA_SETUP() {
 	int i, retval = 0;
 
+	platform = check_platform();
 	retval = map_gpio();
 	if (retval < 0) {
 		rtapi_print_msg(RTAPI_MSG_ERR,
@@ -368,6 +371,18 @@ FUNCTION(transfer) {
 
 int map_gpio() {
 	int fd;
+	static u32 mem_base, mem_spi_base;
+
+	switch (platform) {
+	case RPI:
+		mem_base = BCM2835_GPIO_BASE;
+		mem_spi_base = BCM2835_SPI_BASE;
+		break;
+	case RPI_2:
+		mem_base = BCM2835_GPIO_BASE + BCM2709_OFFSET;
+		mem_spi_base = BCM2835_SPI_BASE + BCM2709_OFFSET;
+		break;
+	}
 
 	fd = open("/dev/mem", O_RDWR | O_SYNC);
 	if (fd < 0) {
@@ -382,7 +397,7 @@ int map_gpio() {
 	        PROT_READ|PROT_WRITE,
 	        MAP_SHARED,
 	        fd,
-	        BCM2835_GPIO_BASE);
+	        mem_base);
 
 	/* mmap SPI */
 	spi = mmap(
@@ -391,7 +406,7 @@ int map_gpio() {
 	        PROT_READ|PROT_WRITE,
 	        MAP_SHARED,
 	        fd,
-	        BCM2835_SPI_BASE);
+	        mem_spi_base);
 
 	close(fd);
 
@@ -526,4 +541,28 @@ static int pluto_program() {
 		}
 	}
 	rtapi_print("...done\n");
+}
+
+platform_t check_platform(void)
+{
+	FILE *fp;
+	char buf[2048];
+	size_t fsize;
+
+	fp = fopen("/proc/cpuinfo", "r");
+	fsize = fread(buf, 1, sizeof(buf), fp);
+	fclose(fp);
+	
+	if (fsize == 0 || fsize == sizeof(buf))
+		return 0;
+
+	/* NUL terminate the buffer */
+	buf[fsize] = '\0';
+
+	if (NULL != strstr(buf, "BCM2708"))
+		return RPI;
+	else if (NULL != strstr(buf, "BCM2709"))
+		return RPI_2;
+	else
+		return UNSUPPORTED;
 }
