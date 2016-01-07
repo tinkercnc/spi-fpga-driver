@@ -18,13 +18,12 @@
 //    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 //**********************************************************************
-/* Open-Drain buffer
+// Open-Drain buffer
 module OC_Buff(in, out);
 input in;
 output out;
 assign out = in ? 1'bz : 1'b0;
 endmodule
-*/
 
 //**********************************************************************
 module pluto_spi_rspi(clk, SCK, MOSI, MISO, SSEL, LED, nConfig, nRESET, nPE, quadA, quadB, quadZ, up, down, dout, din);
@@ -34,26 +33,26 @@ input clk;
 input SCK, SSEL, MOSI, nRESET;
 output MISO, nConfig, nPE;
 output LED;
-//output [3:0] down = 4'bZZZZ;
-//output [3:0] up = 4'bZZZZ;
+output [3:0] down = 4'bZZZZ;
+output [3:0] up = 4'bZZZZ;
 
 input [7:0] din;
 input [3:0] quadA;
 input [3:0] quadB;
 input [3:0] quadZ;
-wire do_tristate;
 
 assign nConfig = nRESET;
 //assign nConfig = 1'b1;
 assign nPE = 1'b1;
 
 reg[9:0] real_dout; 
-output [9:0] dout = do_tristate ? 10'bZZZZZZZZZZ : real_dout;
+output [9:0] dout = 10'bZZZZZZZZZZ;
+OC_Buff ocout[9:0](real_dout, dout);
 
-wire[3:0] real_up;
-output [3:0] up = do_tristate ? 4'bZZZZ : real_up;
 wire[3:0] real_down;
-output [3:0] down = do_tristate ? 4'bZZZZ : real_down;
+OC_Buff ocdown[3:0](real_down, down);
+wire[3:0] real_up;
+OC_Buff ocup[3:0](real_up, up);
 
 reg Zpolarity;
 

@@ -37,7 +37,7 @@
  ------------------------------------------------------------------------------
 
 
-File Generation Date & Time: Tue Jan 21 00:23:48 2014
+File Generation Date & Time: Wed Jan 06 00:21:33 2016
 Quartus II Version 9.0 Build 235 06/17/2009 Service Pack 2 SJ Web Edition
 CHIP  "pluto-spi-bbb"  ASSIGNED TO AN: EP1K10TC100-3
 
@@ -48,7 +48,7 @@ nCEO                         : 2         : output :                   :         
 TDO                          : 3         : output :                   :         :           :                
 VCC_IO                       : 4         : power  :                   : 3.3V    :           :                
 din[3]                       : 5         : input  : LVTTL/LVCMOS      :         :           : Y              
-nPE                          : 6         : output : LVTTL/LVCMOS      :         :           : Y              
+RESERVED_INPUT               : 6         :        :                   :         :           :                
 RESERVED_INPUT               : 7         :        :                   :         :           :                
 din[2]                       : 8         : input  : LVTTL/LVCMOS      :         :           : Y              
 din[4]                       : 9         : input  : LVTTL/LVCMOS      :         :           : Y              

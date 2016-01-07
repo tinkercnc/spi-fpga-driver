@@ -37,9 +37,9 @@
  ------------------------------------------------------------------------------
 
 
-File Generation Date & Time: Wed Jan 06 22:26:57 2016
+File Generation Date & Time: Thu Jan 07 02:47:59 2016
 Quartus II Version 9.0 Build 235 06/17/2009 Service Pack 2 SJ Web Edition
-CHIP  "pluto-spi"  ASSIGNED TO AN: EP1K10TC100-3
+CHIP  "pluto-spi-opendrain"  ASSIGNED TO AN: EP1K10TC100-3
 
 Pin Name/Usage               : Location  : Dir.   : I/O Standard      : Voltage : I/O Bank  : User Assignment
 -------------------------------------------------------------------------------------------------------------

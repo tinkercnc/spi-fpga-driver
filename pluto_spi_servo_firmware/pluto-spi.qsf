@@ -1,0 +1,104 @@
+# -------------------------------------------------------------------------- #
+#
+# Copyright (C) 1991-2009 Altera Corporation
+# Your use of Altera Corporation's design tools, logic functions 
+# and other software and tools, and its AMPP partner logic 
+# functions, and any output files from any of the foregoing 
+# (including device programming or simulation files), and any 
+# associated documentation or information are expressly subject 
+# to the terms and conditions of the Altera Program License 
+# Subscription Agreement, Altera MegaCore Function License 
+# Agreement, or other applicable license agreement, including, 
+# without limitation, that your use is for the sole purpose of 
+# programming logic devices manufactured by Altera and sold by 
+# Altera or its authorized distributors.  Please refer to the 
+# applicable agreement for further details.
+#
+# -------------------------------------------------------------------------- #
+#
+# Quartus II
+# Version 9.0 Build 235 06/17/2009 Service Pack 2 SJ Web Edition
+# Date created = 22:18:09  July 15, 2013
+#
+# -------------------------------------------------------------------------- #
+#
+# Notes:
+#
+# 1) The default values for assignments are stored in the file:
+#		pluto-spi_assignment_defaults.qdf
+#    If this file doesn't exist, see file:
+#		assignment_defaults.qdf
+#
+# 2) Altera recommends that you do not modify this file. This
+#    file is updated automatically by the Quartus II software
+#    and any changes you make may be lost or overwritten.
+#
+# -------------------------------------------------------------------------- #
+
+
+set_global_assignment -name FAMILY ACEX1K
+set_global_assignment -name DEVICE "EP1K10TC100-3"
+set_global_assignment -name TOP_LEVEL_ENTITY pluto_spi_rspi
+set_global_assignment -name ORIGINAL_QUARTUS_VERSION "9.0 SP2"
+set_global_assignment -name PROJECT_CREATION_TIME_DATE "22:18:09  JULY 15, 2013"
+set_global_assignment -name LAST_QUARTUS_VERSION "9.0 SP2"
+set_global_assignment -name USE_GENERATED_PHYSICAL_CONSTRAINTS OFF -section_id eda_blast_fpga
+set_global_assignment -name DEVICE_FILTER_PIN_COUNT 100
+set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name FLEX10K_DEVICE_IO_STANDARD LVTTL/LVCMOS
+set_location_assignment PIN_50 -to LED
+set_location_assignment PIN_90 -to SCK
+set_location_assignment PIN_91 -to clk
+set_location_assignment PIN_79 -to MISO
+set_location_assignment PIN_77 -to MOSI
+set_location_assignment PIN_81 -to SSEL
+set_global_assignment -name GENERATE_RBF_FILE ON
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS "AS INPUT TRI-STATED"
+set_location_assignment PIN_6 -to nPE
+set_location_assignment PIN_49 -to nConfig
+set_global_assignment -name RESERVE_ALL_UNUSED_PINS_NO_OUTPUT_GND "AS INPUT TRI-STATED"
+set_location_assignment PIN_28 -to quadA[0]
+set_location_assignment PIN_39 -to quadA[1]
+set_location_assignment PIN_45 -to quadA[2]
+set_location_assignment PIN_55 -to quadA[3]
+set_location_assignment PIN_29 -to quadB[0]
+set_location_assignment PIN_40 -to quadB[1]
+set_location_assignment PIN_46 -to quadB[2]
+set_location_assignment PIN_57 -to quadB[3]
+set_location_assignment PIN_43 -to quadZ[1]
+set_location_assignment PIN_47 -to quadZ[2]
+set_location_assignment PIN_56 -to quadZ[3]
+set_location_assignment PIN_38 -to quadZ[0]
+set_location_assignment PIN_21 -to up[0]
+set_location_assignment PIN_23 -to down[1]
+set_location_assignment PIN_20 -to down[0]
+set_location_assignment PIN_22 -to up[1]
+set_location_assignment PIN_15 -to down[2]
+set_location_assignment PIN_26 -to up[2]
+set_location_assignment PIN_14 -to down[3]
+set_location_assignment PIN_27 -to up[3]
+set_location_assignment PIN_19 -to din[0]
+set_location_assignment PIN_93 -to din[1]
+set_location_assignment PIN_8 -to din[2]
+set_location_assignment PIN_5 -to din[3]
+set_location_assignment PIN_9 -to din[4]
+set_location_assignment PIN_10 -to din[5]
+set_location_assignment PIN_13 -to din[6]
+set_location_assignment PIN_16 -to din[7]
+set_location_assignment PIN_48 -to dout[0]
+set_location_assignment PIN_58 -to dout[1]
+set_location_assignment PIN_61 -to dout[2]
+set_location_assignment PIN_62 -to dout[3]
+set_location_assignment PIN_63 -to dout[4]
+set_location_assignment PIN_64 -to dout[5]
+set_location_assignment PIN_65 -to dout[6]
+set_location_assignment PIN_68 -to dout[7]
+set_location_assignment PIN_69 -to dout[8]
+set_location_assignment PIN_70 -to dout[9]
+set_location_assignment PIN_82 -to nRESET
+set_global_assignment -name VERILOG_FILE spi_servo_rspi.v
+set_global_assignment -name VERILOG_FILE wdt.v
+set_global_assignment -name VERILOG_FILE quad.v
+set_global_assignment -name MISC_FILE "E:/FPGA/LINUXCNC/PLUTO_SPI_SERVO_FIRMWARE_COPY/pluto-spi.dpf"
+set_global_assignment -name MISC_FILE "E:/fpga/linuxcnc/pluto_spi_servo_firmware/pluto-spi.dpf"

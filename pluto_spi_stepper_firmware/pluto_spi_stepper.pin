@@ -37,7 +37,7 @@
  ------------------------------------------------------------------------------
 
 
-File Generation Date & Time: Tue Jan 21 19:49:07 2014
+File Generation Date & Time: Thu Jan 07 02:30:05 2016
 Quartus II Version 9.0 Build 235 06/17/2009 Service Pack 2 SJ Web Edition
 CHIP  "pluto_spi_stepper"  ASSIGNED TO AN: EP1K10TC100-3
 
@@ -48,7 +48,7 @@ nCEO                         : 2         : output :                   :         
 TDO                          : 3         : output :                   :         :           :                
 VCC_IO                       : 4         : power  :                   : 3.3V    :           :                
 din[3]                       : 5         : input  : LVTTL/LVCMOS      :         :           : Y              
-RESERVED_INPUT               : 6         :        :                   :         :           :                
+nPE                          : 6         : output : LVTTL/LVCMOS      :         :           : Y              
 RESERVED_INPUT               : 7         :        :                   :         :           :                
 din[2]                       : 8         : input  : LVTTL/LVCMOS      :         :           : Y              
 din[4]                       : 9         : input  : LVTTL/LVCMOS      :         :           : Y              
@@ -92,7 +92,7 @@ din[15]                      : 46        : input  : LVTTL/LVCMOS      :         
 dout[10]                     : 47        : output : LVTTL/LVCMOS      :         :           : Y              
 dout[0]                      : 48        : output : LVTTL/LVCMOS      :         :           : Y              
 nConfig                      : 49        : output : LVTTL/LVCMOS      :         :           : Y              
-led                          : 50        : output : LVTTL/LVCMOS      :         :           : Y              
+LED                          : 50        : output : LVTTL/LVCMOS      :         :           : Y              
 nCONFIG                      : 51        : input  :                   :         :           :                
 VCC_INT                      : 52        : power  :                   : 2.5V    :           :                
 MSEL1                        : 53        : input  :                   :         :           :                
@@ -119,27 +119,27 @@ TDI                          : 73        : input  :                   :         
 nCE                          : 74        : input  :                   :         :           :                
 DCLK                         : 75        : bidir  :                   :         :           :                
 DATA0                        : 76        : input  :                   :         :           :                
-pport_data[0]                : 77        : bidir  : LVTTL/LVCMOS      :         :           : Y              
+MOSI                         : 77        : input  : LVTTL/LVCMOS      :         :           : Y              
 RESERVED_INPUT               : 78        :        :                   :         :           :                
-pport_data[1]                : 79        : bidir  : LVTTL/LVCMOS      :         :           : Y              
-nDataStr                     : 80        : input  : LVTTL/LVCMOS      :         :           : Y              
-epp_nReset                   : 81        : input  : LVTTL/LVCMOS      :         :           : Y              
-pport_data[2]                : 82        : bidir  : LVTTL/LVCMOS      :         :           : Y              
+MISO                         : 79        : output : LVTTL/LVCMOS      :         :           : Y              
+RESERVED_INPUT               : 80        :        :                   :         :           :                
+SSEL                         : 81        : input  : LVTTL/LVCMOS      :         :           : Y              
+nRESET                       : 82        : input  : LVTTL/LVCMOS      :         :           : Y              
 VCC_IO                       : 83        : power  :                   : 3.3V    :           :                
-nAddrStr                     : 84        : input  : LVTTL/LVCMOS      :         :           : Y              
-pport_data[3]                : 85        : bidir  : LVTTL/LVCMOS      :         :           : Y              
-pport_data[4]                : 86        : bidir  : LVTTL/LVCMOS      :         :           : Y              
-nWait                        : 87        : output : LVTTL/LVCMOS      :         :           : Y              
+RESERVED_INPUT               : 84        :        :                   :         :           :                
+RESERVED_INPUT               : 85        :        :                   :         :           :                
+RESERVED_INPUT               : 86        :        :                   :         :           :                
+RESERVED_INPUT               : 87        :        :                   :         :           :                
 GND_INT                      : 88        : gnd    :                   :         :           :                
 GND+                         : 89        :        :                   :         :           :                
-nWrite                       : 90        : input  : LVTTL/LVCMOS      :         :           : Y              
+SCK                          : 90        : input  : LVTTL/LVCMOS      :         :           : Y              
 clk                          : 91        : input  : LVTTL/LVCMOS      :         :           : Y              
 VCC_INT                      : 92        : power  :                   : 2.5V    :           :                
 din[1]                       : 93        : input  : LVTTL/LVCMOS      :         :           : Y              
-pport_data[5]                : 94        : bidir  : LVTTL/LVCMOS      :         :           : Y              
+RESERVED_INPUT               : 94        :        :                   :         :           :                
 GND_INT                      : 95        : gnd    :                   :         :           :                
-pport_data[6]                : 96        : bidir  : LVTTL/LVCMOS      :         :           : Y              
-pport_data[7]                : 97        : bidir  : LVTTL/LVCMOS      :         :           : Y              
+RESERVED_INPUT               : 96        :        :                   :         :           :                
+RESERVED_INPUT               : 97        :        :                   :         :           :                
 RESERVED_INPUT               : 98        :        :                   :         :           :                
 RESERVED_INPUT               : 99        :        :                   :         :           :                
 TCK                          : 100       : input  :                   :         :           :                

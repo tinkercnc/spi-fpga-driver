@@ -23,19 +23,21 @@ output out;
 assign out = in ? 1'bz : 1'b0;
 endmodule
 
-module pluto_spi_stepper_opendrain(clk, SCK, MOSI, MISO, SSEL, nRESET, LED, nConfig, dout, din, step, dir);
+module pluto_spi_stepper_opendrain(clk, SCK, MOSI, MISO, SSEL, nRESET, nPE, LED, nConfig, dout, din, step, dir);
 parameter W=10;
 parameter F=11;
 parameter T=4;
 input clk;
 
 input SCK, SSEL, MOSI, nRESET;
-output MISO, nConfig;
+output MISO, nConfig = 1'bZ, nPE;
 output LED;
 input [15:0] din;
 
 assign nConfig = nRESET;
 //assign nConfig = 1'b1;
+assign nPE = 1'b1;
+
 reg Spolarity;
 
 reg[13:0] real_dout;

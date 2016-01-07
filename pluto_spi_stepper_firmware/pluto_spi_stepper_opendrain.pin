@@ -36,7 +36,7 @@
  ------------------------------------------------------------------------------
 
 
-File Generation Date & Time: Thu Jan 23 01:30:24 2014
+File Generation Date & Time: Thu Jan 07 02:32:16 2016
 Quartus II Version 9.0 Build 235 06/17/2009 Service Pack 2 SJ Web Edition
 CHIP  "pluto_spi_stepper_opendrain"  ASSIGNED TO AN: EP1K10TC100-3
 
@@ -47,7 +47,7 @@ nCEO                         : 2         : output :                   :         
 TDO                          : 3         : output :                   :         :           :                
 VCC_IO                       : 4         : power  :                   : 3.3V    :           :                
 din[3]                       : 5         : input  : LVTTL/LVCMOS      :         :           : Y              
-GND*                         : 6         :        :                   :         :           :                
+nPE                          : 6         : output : LVTTL/LVCMOS      :         :           : Y              
 GND*                         : 7         :        :                   :         :           :                
 din[2]                       : 8         : input  : LVTTL/LVCMOS      :         :           : Y              
 din[4]                       : 9         : input  : LVTTL/LVCMOS      :         :           : Y              
@@ -88,7 +88,7 @@ din[13]                      : 43        : input  : LVTTL/LVCMOS      :         
 VCC_IO                       : 44        : power  :                   : 3.3V    :           :                
 din[14]                      : 45        : input  : LVTTL/LVCMOS      :         :           : Y              
 din[15]                      : 46        : input  : LVTTL/LVCMOS      :         :           : Y              
-GND*                         : 47        :        :                   :         :           :                
+dout[10]                     : 47        : output : LVTTL/LVCMOS      :         :           : Y              
 dout[0]                      : 48        : output : LVTTL/LVCMOS      :         :           : Y              
 nConfig                      : 49        : output : LVTTL/LVCMOS      :         :           : Y              
 LED                          : 50        : output : LVTTL/LVCMOS      :         :           : Y              
@@ -96,9 +96,9 @@ nCONFIG                      : 51        : input  :                   :         
 VCC_INT                      : 52        : power  :                   : 2.5V    :           :                
 MSEL1                        : 53        : input  :                   :         :           :                
 MSEL0                        : 54        : input  :                   :         :           :                
-GND*                         : 55        :        :                   :         :           :                
-GND*                         : 56        :        :                   :         :           :                
-GND*                         : 57        :        :                   :         :           :                
+dout[11]                     : 55        : output : LVTTL/LVCMOS      :         :           : Y              
+dout[12]                     : 56        : output : LVTTL/LVCMOS      :         :           : Y              
+dout[13]                     : 57        : output : LVTTL/LVCMOS      :         :           : Y              
 dout[1]                      : 58        : output : LVTTL/LVCMOS      :         :           : Y              
 GND_INT                      : 59        : gnd    :                   :         :           :                
 VCC_INT                      : 60        : power  :                   : 2.5V    :           :                
