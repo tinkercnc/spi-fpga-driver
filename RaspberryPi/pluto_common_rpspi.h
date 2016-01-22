@@ -94,4 +94,26 @@ typedef enum {
 	RPI_2
 } platform_t;
 
+
+static char *firmware = ""; // if this is empty, no firmware upload will be performing (ie. for CPLD or Config Rom)
+RTAPI_MP_STRING(firmware, "Firmware Path");
+
+static inline int64_t extend(int64_t old, int newlow, int nbits) {
+	int64_t mask = (1<<nbits) - 1;
+	int64_t maxdelta = mask / 2;
+	int64_t oldhigh = old & ~mask;
+	int64_t oldlow = old & mask;
+	int64_t candidate1, candidate2;
+
+	candidate1 = oldhigh | newlow;
+	if(oldlow < newlow) candidate2 = candidate1 - (1<<nbits);
+	else                candidate2 = candidate1 + (1<<nbits);
+
+	if (llabs(old-candidate1) > maxdelta) {
+		return candidate2;
+	}else
+		return candidate1;
+}
+
+
 #endif
