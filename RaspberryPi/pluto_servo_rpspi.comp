@@ -46,10 +46,10 @@ param rw bit pwm.#.pwmdir[4]=0
 
 param rw bit pwm.is-pdm "Set to TRUE to use PDM (also called interleaved PWM) mode.  Set to FALSE to use traditional PWM mode.  Affects all PWM outputs.";
 
+//definitiv nur 18 Ausgaenge
+pin in bit dout.##[18];
 
-pin in bit dout.##[20];
-
-param rw bit dout.##-invert[20]
+param rw bit dout.##-invert[18]
 "If TRUE, the output on the corresponding \\fBdout.\\fIMM\\fR is inverted.";
 
 pin out bit din.##[20];
@@ -107,7 +107,7 @@ static platform_t platform;
 static int map_gpio();
 static void setup_gpio();
 static void restore_gpio();
-static int pluto_program();
+static int pluto_program(char *);
 platform_t check_platform(void);
 
 typedef struct {
@@ -118,24 +118,6 @@ typedef struct {
 
 #define W 14
 #define MASK ((1<<W)-1)
-
-static inline int64_t extend(int64_t old, int newlow, int nbits) {
-    int64_t mask = (1<<nbits) - 1;
-    int64_t maxdelta = mask / 2;
-    int64_t oldhigh = old & ~mask;
-    int64_t oldlow = old & mask;
-    int64_t candidate1, candidate2;
-
-    candidate1 = oldhigh | newlow;
-    if(oldlow < newlow) candidate2 = candidate1 - (1<<nbits);
-    else                candidate2 = candidate1 + (1<<nbits);
-
-    if (llabs(old-candidate1) > maxdelta)
-    {
-	    return candidate2;
-    }else
-	    return candidate1;
-}
 
 int PWM(int enable, double value, double offset, double scale, double min_dc, double max_dc, int dio0, int dio1, int is_pdm, int is_pwmdir) {
     int result;
@@ -176,12 +158,15 @@ EXTRA_SETUP() {
 		return retval;
 	}
 
-	retval = pluto_program();
-	if(retval < 0)
+	if(firmware != "")
 	{
-		rtapi_print_msg(RTAPI_MSG_ERR,
-		        "HAL_pluto_servo_rpspi: ERROR: uploading firmware failed!!!\n");
-		return retval;
+		retval = pluto_program(firmware);
+		if(retval < 0)
+		{
+			rtapi_print_msg(RTAPI_MSG_ERR,
+					"HAL_pluto_servo_rpspi: ERROR: uploading firmware failed!!!\n");
+			return retval;
+		}
 	}
         
 	setup_gpio();
@@ -467,13 +452,13 @@ void restore_gpio() {
 
 
 #define FIRMWARE_SIZE 19895
-static int pluto_program() {
+static int pluto_program(char *firmware) {
 	int byte, bit;
 	int i;
 	FILE *f;
 	int size = 0;
 	
-	f= fopen("/home/rpi/regal/src/linuxcnc-pluto-servo-spi/pluto_spi_servo_firmware/pluto-spi.rbf", "rb");
+	f= fopen(firmware, "rb");
 	if(!f) {
 		rtapi_print_msg(RTAPI_MSG_ERR, "fopen-Error\n");
 		return -EIO;
