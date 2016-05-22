@@ -17,7 +17,7 @@
  */
 
 /* Without Source Tree */
-#define WOST
+#undef WOST
 
 #include <ctype.h>
 #include <fcntl.h>
