@@ -11,10 +11,23 @@ GPIO25  22      || Data2    4
 
 GND  20,25      || GND     18-25
 
+It works fine with Gemi Orcullo's machinekit image with RT kernel.
+http://0ptr.link/files/RPi2-machinekit-1.0.img.bz2
 
+Simple instructions to use it with a cheap MaxII CPLD board:
+   - open the pluto_spi_xxx_firmware in Quartus II 13.1 
+   - set device to the cpld device (ie. EPM570T100C5 )
+   - use pin planning window to assign pins 
+   - compile all 
+   - use programmer window to burn the device 
+   - connected it to rpi with 5 wires 
+
+On RPI2
+   - git clone https://github.com/tinkercnc/spi-fpga-driver.git 
 Compiling the Pluto SPI driver for the RasPi:
 
-    sudo comp --install pluto_servo_rpspi.comp
-    sudo comp --install pluto_step_rpspi.comp
+    sudo comp --install pluto_servo_rpspi.comp or
+    sudo comp --install pluto_step_rpspi.comp or
+    sudo comp --install pluto_mix_rpspi.comp        (3 stepper units and 1 pwm + encoder)
 
-
+more instructions follows... :)
