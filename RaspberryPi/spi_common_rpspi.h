@@ -1,4 +1,4 @@
-/*   This is a component of pluto_servo/step_bbbspi for RaspberryPi to FPGA over SPI for linuxcnc.
+/*   This is a component  for RaspberryPi to FPGA over SPI for linuxcnc.
  *    Copyright 2013 Matsche <tinker@play-pla.net>
  *                               based on GP Orcullo's picnc driver and
  *				 based on the pluto_common.h from Jeff Epler <jepler@unpythonic.net>

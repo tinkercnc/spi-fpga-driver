@@ -1,4 +1,4 @@
-/*    This is a component for RaspberryPi to hostmot2 over SPI for machinekit.
+/*    This is a component for RaspberryPi to hostmot2 over SPI for linuxcnc.
  *    Copyright 2016 Matsche <tinker@play-pla.net>
  *
  *    This program is free software; you can redistribute it and/or modify
