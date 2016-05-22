@@ -16,7 +16,8 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#define sandbox
+/* Without Source Tree */
+#define WOST
 
 #include <ctype.h>
 #include <fcntl.h>
@@ -33,15 +34,12 @@
 #include "hal.h"
 #include "rtapi.h"
 #include "rtapi_app.h"
-/* linuxcnc
-#include "rtapi_stdint.h"
-#include "rtapi_gfp.h"
-*/
-#ifdef sandbox
+
+#if defined (WOST)
 #include "include/rtapi_bool.h"
 #include "include/hostmot2-lowlevel.h"
 #include "include/hostmot2.h"
-#elif
+#else
 #include "rtapi_bool.h"
 #include "hostmot2-lowlevel.h"
 #include "hostmot2.h"
