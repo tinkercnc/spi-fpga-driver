@@ -365,7 +365,7 @@ FUNCTION(transfer) {
 		double actual_max;
 		double scale_abs = abs(stepgen_scale(i));
 
-		v = v - debug_2 * est_err / fperiod;
+		v = v - 0.5 * est_err / fperiod;
 		if(v > 0) v = v + .5/scale_abs;
 		else if(v < 0) v = v - .5/scale_abs;
 
@@ -407,7 +407,7 @@ FUNCTION(transfer) {
 	}
 	// Stepper channel end
 	//------------------------------
-//
+
 	//------------------------------
 	// Servo channel begin
 	if(pwm_max_dc > 1) pwm_max_dc = 1;
@@ -425,13 +425,14 @@ FUNCTION(transfer) {
 	for(i=0; i<14; i++) {
 		if(!dout(i) ^ !dout_invert(i)) r |= (1<<i);
 	}
-	txBuf[2] = r;
-	r = steplen_ticks | (dirtime_ticks << 8);
+	//txBuf[2] = r;
+	
+	r  |= (steplen_ticks | (dirtime_ticks << 8)) <<16;
 	//r = steplen_ticks+stepspace_ticks | (dirtime_ticks << 8);
 	if (stepgen_step_polarity) {
-			r |= 0x8000;
-	}else r &= 0x7FFF;
-	
+			r |= 0x80000000;
+	}else r &= 0x7FFFFFFF;
+	txBuf[2] = r;
 	
 	for (i=3; i<BUFSIZE; i++) {
 		txBuf[i] = i;

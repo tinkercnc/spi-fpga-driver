@@ -344,6 +344,7 @@ FUNCTION(transfer) {
 		if(!dout(i) ^ !dout_invert(i)) r |= (1<<i);
 	}
 	txBuf[2] = r;
+	r=0;
 	r = steplen_ticks | (dirtime_ticks << 8);
 	//r = steplen_ticks+stepspace_ticks | (dirtime_ticks << 8);
 	if (stepgen_step_polarity) {
