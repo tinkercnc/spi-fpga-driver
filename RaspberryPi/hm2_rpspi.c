@@ -1,5 +1,5 @@
 /*    This is a component for RaspberryPi to hostmot2 over SPI for machinekit.
- *    Copyright 2016 by Matsche <tinker@play-pla.net>
+ *    Copyright 2016 Matsche <tinker@play-pla.net>
  *
  *    This program is free software; you can redistribute it and/or modify
  *    it under the terms of the GNU General Public License as published by
@@ -16,6 +16,9 @@
  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/* Without Source Tree */
+#define WOST
+
 #include <ctype.h>
 #include <fcntl.h>
 #include <string.h>
@@ -27,23 +30,30 @@
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/fsuid.h>
 
 #include "hal.h"
 #include "rtapi.h"
 #include "rtapi_app.h"
-/*
-#include "include/rtapi_stdint.h"
-#include "include/rtapi_bool.h"
-#include "include/rtapi_gfp.h"
-*/
-#include "include/rtapi_bool.h"
 
+#include "rtapi_stdint.h"
+#include "rtapi_bool.h"
+#include "rtapi_gfp.h"
+
+#include "rtapi_bool.h"
+
+#if defined (WOST)
 #include "include/hostmot2-lowlevel.h"
 #include "include/hostmot2.h"
+#else
+#include "hostmot2-lowlevel.h"
+#include "hostmot2.h"
+#endif
+
 #include "spi_common_rpspi.h"
 
 #if !defined(BUILD_SYS_USER_DSO)
-#error "This driver is for usermode threads only"
+//#error "This driver is for usermode threads only"
 #endif
 
 MODULE_LICENSE("GPL");
@@ -55,23 +65,23 @@ MODULE_SUPPORTED_DEVICE("Mesa-AnythingIO-7i90");
 #define MAX_MSG (512)
 
 volatile unsigned *gpio, *spi;
-//static volatile u32 txBuf[MAX_MSG], rxBuf[MAX_MSG];
+//static volatile uint32_t txBuf[MAX_MSG], rxBuf[MAX_MSG];
 static platform_t platform;
 
 typedef struct hm2_rpspi_struct hm2_rpspi_t;
 
-static u32 mk_read_cmd(u16, unsigned, bool);
-static u32 mk_write_cmd(u16, unsigned, bool);
-static int hm2_rpspi_write(hm2_lowlevel_io_t *, u32, void *, int);
-static int hm2_rpspi_read(hm2_lowlevel_io_t *, u32, void *, int);
+static uint32_t mk_read_cmd(uint16_t, unsigned, bool);
+static uint32_t mk_write_cmd(uint16_t, unsigned, bool);
+static int hm2_rpspi_write(hm2_lowlevel_io_t *, uint32_t, void *, int);
+static int hm2_rpspi_read(hm2_lowlevel_io_t *, uint32_t, void *, int);
 static int check_cookie(hm2_rpspi_t *);
 static int read_ident(hm2_rpspi_t *, char *);
-static int probe_board(hm2_rpspi_t *, u16);
+static int probe_board(hm2_rpspi_t *, uint16_t);
 static void hm2_rpspi_cleanup(void);
 static int hm2_rpspi_setup(void);
 
 static int map_gpio();
-static void setup_gpio(u16);
+static void setup_gpio(uint16_t);
 static void restore_gpio();
 static int hm2_rpspi_program(char *);
 static platform_t check_platform(void);
@@ -82,23 +92,33 @@ RTAPI_MP_ARRAY_STRING(config, MAX_BOARDS, "config string for the AnyIO boards (s
 struct hm2_rpspi_struct {
     hm2_lowlevel_io_t llio;
     int nr;
-    u32 txBuf[MAX_MSG];
-    u32 rxBuf[MAX_MSG];
-    u16 spiclkdiv;
-	u8 spibpf;	//bits per frame
+    uint32_t txBuf[MAX_MSG];
+    uint32_t rxBuf[MAX_MSG];
+    uint16_t spiclkdiv;
+	uint8_t spibpf;	//bits per frame
 };
 
 static hm2_rpspi_t boards[MAX_BOARDS];
 static int comp_id;
 
+
+/*************************************************/
+//so untested, you could implement rtapi_open_as_root in "C" as
+int rtapi_open_as_root(const char *filename, int mode) {
+		setfsuid(geteuid());
+	int r = open(filename, mode);
+	setfsuid(getuid());
+	return r;
+}
+
 /*************************************************/
 // aib (address increment bit)
-static u32 mk_read_cmd(u16 addr, unsigned msglen, bool aib) {
+static uint32_t mk_read_cmd(uint16_t addr, unsigned msglen, bool aib) {
     return 0 | (addr << 16) | 0xA000 | (aib ? 0x800 : 0) | (msglen << 4);
 }
 
 /*************************************************/
-static u32 mk_write_cmd(u16 addr, unsigned msglen, bool aib) {
+static uint32_t mk_write_cmd(uint16_t addr, unsigned msglen, bool aib) {
     return 0 | (addr << 16) | 0xB000 | (aib ? 0x800 : 0) | (msglen << 4);
 }
 
@@ -124,18 +144,18 @@ SPI_CS_RXD		0x00020000
 		0 = RX FIFO is empty.
 		1 = RX FIFO contains at least 1 byte.
 */
-static int hm2_rpspi_write(hm2_lowlevel_io_t *llio, u32 addr, void *buffer, int size) {
+static int hm2_rpspi_write(hm2_lowlevel_io_t *llio, uint32_t addr, void *buffer, int size) {
 	//rtapi_print_msg(RTAPI_MSG_ERR, "hm2_rpspi_write addr: %08x, size: %d", addr, size);
     hm2_rpspi_t *this = (hm2_rpspi_t*) llio;
     if(size == 0) return 0;
     if(size % 4) return -EINVAL;
 
     int msgsize = size/4;
-	u8 *tbuff;
-    u8 *buffer8 = (u8 *)buffer;
-	u32 *buffer32 = (u32 *)buffer;
+	uint8_t *tbuff;
+    uint8_t *buffer8 = (uint8_t *)buffer;
+	uint32_t *buffer32 = (uint32_t *)buffer;
     int i=0, j=0;
-	u8  gully;
+	uint8_t  gully;
 
     this->txBuf[0] = mk_write_cmd(addr, msgsize, true);
 
@@ -146,7 +166,7 @@ static int hm2_rpspi_write(hm2_lowlevel_io_t *llio, u32 addr, void *buffer, int 
 	//BCM2835_SPICS = SPI_CS_TA|SPI_CS_CPHA|SPI_CS_CLEAR_TX|SPI_CS_CLEAR_RX;
 	BCM2835_SPICS |= SPI_CS_TA|SPI_CS_CLEAR_TX|SPI_CS_CLEAR_RX;
 
-	tbuff = (u8 *)this->txBuf;
+	tbuff = (uint8_t *)this->txBuf;
 
 	/* send txBuf */
 	/* RPi SPI transfers 8 bits at a time only */
@@ -178,7 +198,7 @@ static int hm2_rpspi_write(hm2_lowlevel_io_t *llio, u32 addr, void *buffer, int 
 }
 
 /*************************************************/
-static int hm2_rpspi_read(hm2_lowlevel_io_t *llio, u32 addr, void *buffer, int size) {
+static int hm2_rpspi_read(hm2_lowlevel_io_t *llio, uint32_t addr, void *buffer, int size) {
 	//rtapi_print_msg(RTAPI_MSG_ERR, "hm2_rpspi_read addr: %08x, size: %d", addr, size);
 	
     hm2_rpspi_t *this = (hm2_rpspi_t*) llio;
@@ -186,9 +206,9 @@ static int hm2_rpspi_read(hm2_lowlevel_io_t *llio, u32 addr, void *buffer, int s
     if(size % 4) return -EINVAL;
 
     int msgsize = size/4;
-	u8 *tbuff, *rbuff;
-    u8 *buffer8 = buffer;
-	u32 *buffer32 = (u32 *)buffer;
+	uint8_t *tbuff, *rbuff;
+    uint8_t *buffer8 = buffer;
+	uint32_t *buffer32 = (uint32_t *)buffer;
     int j=0, i=0;
     this->txBuf[0] = mk_read_cmd(addr, msgsize, true);
 	
@@ -206,8 +226,8 @@ static int hm2_rpspi_read(hm2_lowlevel_io_t *llio, u32 addr, void *buffer, int s
 		rtapi_print_msg(RTAPI_MSG_ERR, "1 BCM2835_SPICS: %08x:", BCM2835_SPICS);
 	*/
 	
-	tbuff = (u8 *)this->txBuf;
-	rbuff = (u8 *)this->rxBuf;
+	tbuff = (uint8_t *)this->txBuf;
+	rbuff = (uint8_t *)this->rxBuf;
 	
 	
 	/* send txBuf */
@@ -260,8 +280,8 @@ static int hm2_rpspi_read(hm2_lowlevel_io_t *llio, u32 addr, void *buffer, int s
 
 /*************************************************/
 static int check_cookie(hm2_rpspi_t *board) {
-    u32 cookie[4];
-    u32 xcookie[4] = {0x55aacafe, 0x54534f48, 0x32544f4d, 0x00000400};
+    uint32_t cookie[4];
+    uint32_t xcookie[4] = {0x55aacafe, 0x54534f48, 0x32544f4d, 0x00000400};
     int r = hm2_rpspi_read(&board->llio, 0x100, cookie, 16);
     if(r < 0) return -errno;
 
@@ -280,7 +300,7 @@ static int read_ident(hm2_rpspi_t *board, char *ident) {
 }
 
 /*************************************************/
-static int probe_board(hm2_rpspi_t *board, u16 spiclkdiv) {
+static int probe_board(hm2_rpspi_t *board, uint16_t spiclkdiv) {
     //printf("probe %d\n", spiclkdiv);
    
     board->spiclkdiv = spiclkdiv;
@@ -337,7 +357,7 @@ static int probe_board(hm2_rpspi_t *board, u16 spiclkdiv) {
 //EXTRA_SETUP() {
 static int hm2_rpspi_setup(void) {
 	int i, retval = 0;
-	u16 spiclkdiv = 3;  // 3 = approx. 32 MHz
+	uint16_t spiclkdiv = 3;  // 3 = approx. 32 MHz
 	
 	platform = check_platform();
 	retval = map_gpio();
@@ -410,7 +430,7 @@ void rtapi_app_exit(void) {
 /*************************************************/
 static int map_gpio() {
 	int fd;
-	static u32 mem_base, mem_spi_base;
+	static uint32_t mem_base, mem_spi_base;
 
 	switch (platform) {
 	case RPI:
@@ -423,7 +443,9 @@ static int map_gpio() {
 		break;
 	}
 
-	fd = open("/dev/mem", O_RDWR | O_SYNC);
+	//fd = open("/dev/mem", O_RDWR | O_SYNC);
+	fd = rtapi_open_as_root("/dev/mem", O_RDWR | O_SYNC);
+	
 	if (fd < 0) {
 		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_pluto_servo_rpspi: can't open /dev/mem \n");
 		return -1;
@@ -463,8 +485,8 @@ static int map_gpio() {
 }
 
 /*************************************************/
-static void setup_gpio(u16 spiclkdiv) {
-	u32 x;
+static void setup_gpio(uint16_t spiclkdiv) {
+	uint32_t x;
 
 	/* change SPI pins */
 	x = BCM2835_GPFSEL0;
@@ -496,7 +518,7 @@ static void setup_gpio(u16 spiclkdiv) {
 
 /*************************************************/
 static void restore_gpio() {
-	u32 x;
+	uint32_t x;
 
 	/* change SPI pins to inputs*/
 	x = BCM2835_GPFSEL0;
@@ -511,7 +533,7 @@ static void restore_gpio() {
 
 /*************************************************/
 static int hm2_rpspi_program(char *firmware) {
-	//ToDo
+	
 	rtapi_print_msg(RTAPI_MSG_ERR,"...done\n");
 }
 
