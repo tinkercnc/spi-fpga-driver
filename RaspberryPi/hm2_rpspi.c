@@ -356,10 +356,15 @@ static int probe_board(hm2_rpspi_t *board, uint16_t spiclkdiv) {
 /*************************************************/
 //EXTRA_SETUP() {
 static int hm2_rpspi_setup(void) {
-	int i, retval = 0;
+	int i, retval = -1;
 	uint16_t spiclkdiv = 3;  // 3 = approx. 32 MHz
 	
 	platform = check_platform();
+	if (platform == UNSUPPORTED) {
+		rtapi_print_msg(RTAPI_MSG_ERR,
+		        "HAL_hm2_rpspi: ERROR: Unsupported Platform, only Raspberry1/2/3 supported...\n");
+		return retval;
+	}
 	retval = map_gpio();
 	if (retval < 0) {
 		rtapi_print_msg(RTAPI_MSG_ERR,
@@ -437,7 +442,7 @@ static int map_gpio() {
 		mem_base = BCM2835_GPIO_BASE;
 		mem_spi_base = BCM2835_SPI_BASE;
 		break;
-	case RPI_2:
+	case RPI_2:	//for RPI 3 too
 		mem_base = BCM2835_GPIO_BASE + BCM2709_OFFSET;
 		mem_spi_base = BCM2835_SPI_BASE + BCM2709_OFFSET;
 		break;
@@ -557,7 +562,7 @@ static platform_t check_platform(void)
 	if (NULL != strstr(buf, "BCM2708"))
 		return RPI;
 	else if (NULL != strstr(buf, "BCM2709"))
-		return RPI_2;
+		return RPI_2;	//for RPI 3 too
 	else
 		return UNSUPPORTED;
 }
