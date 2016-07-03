@@ -363,7 +363,7 @@ static int hm2_rpspi_setup(void) {
 	retval = map_gpio();
 	if (retval < 0) {
 		rtapi_print_msg(RTAPI_MSG_ERR,
-		        "HAL_pluto_servo_rpspi: ERROR: cannot map GPIO memory\n");
+		        "HAL_hm2_rpspi: ERROR: cannot map GPIO memory\n");
 		return retval;
 	}
 	setup_gpio(spiclkdiv);
@@ -383,7 +383,7 @@ static int hm2_rpspi_setup(void) {
 	if(retval < 0)
 	{
 		rtapi_print_msg(RTAPI_MSG_ERR,
-		        "HAL_pluto_servo_rpspi: ERROR: uploading firmware failed!!!\n");
+		        "HAL_hm2_rpspi: ERROR: uploading firmware failed!!!\n");
 		return retval;
 	}
 	*/
@@ -447,7 +447,7 @@ static int map_gpio() {
 	fd = rtapi_open_as_root("/dev/mem", O_RDWR | O_SYNC);
 	
 	if (fd < 0) {
-		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_pluto_servo_rpspi: can't open /dev/mem \n");
+		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_hm2_rpspi: can't open /dev/mem \n");
 		return -1;
 	}
 
@@ -472,12 +472,12 @@ static int map_gpio() {
 	close(fd);
 
 	if (gpio == MAP_FAILED) {
-		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_pluto_servo_rpspi: can't map gpio\n");
+		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_hm2_rpspi: can't map gpio\n");
 		return -2;
 	}
 
 	if (spi == MAP_FAILED) {
-		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_pluto_servo_rpspi: can't map spi\n");
+		rtapi_print_msg(RTAPI_MSG_ERR,"HAL_hm2_rpspi: can't map spi\n");
 		return -3;
 	}
 
